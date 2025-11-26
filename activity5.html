@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Educational Blog — HTML/CSS/JS</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#ffffff;--muted:#6b7280;--accent:#4f46e5;--accent-2:#10b981}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:var(--bg);color:#111}
+    .container{max-width:1100px;margin:36px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{font-size:28px;margin:0}
+    .sub{color:var(--muted);font-size:13px}
+
+    .grid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:992px){.grid{grid-template-columns:260px 1fr}}
+
+    .card{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,0.06)}
+    .search input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e6e9ef}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .chip{padding:6px 10px;border-radius:999px;background:#f1f5f9;font-size:13px;cursor:pointer;border:1px solid transparent}
+    .chip.active{background:var(--accent);color:#fff}
+    .chip.tag-active{background:var(--accent-2);color:#fff}
+
+    /* posts */
+    .posts{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:640px){.posts{grid-template-columns:repeat(2,1fr)}}
+    .post{padding:14px;border-radius:12px;background:var(--card);border:1px solid #edf2f7}
+    .post h2{margin:0 0 6px 0;font-size:17px;cursor:pointer}
+    .meta{font-size:12px;color:var(--muted)}
+    .tags{margin-left:6px}
+    .excerpt{margin-top:8px;color:#374151;font-size:14px}
+    .action-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+
+    /* post view */
+    .post-full h2{margin-top:0}
+    .content{line-height:1.6;color:#111}
+    .back{cursor:pointer;color:var(--muted);font-size:13px}
+
+    /* comments */
+    .comment{border-radius:8px;padding:10px;border:1px solid #edf2f7;margin-bottom:8px}
+    .comment .meta{font-size:12px;color:var(--muted)}
+    .comment-form input,.comment-form textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+    .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+
+    footer{margin-top:22px;text-align:center;color:var(--muted);font-size:13px}
+
+    /* small helpers */
+    .small{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1 id="site-title">Technology Learning Hub</h1>
+        <div class="sub">Curated educational articles, guides and a simple commenting demo.</div>
+      </div>
+      <div>
+        <button id="switch-subject" class="btn">Switch Subject</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- sidebar -->
+      <aside class="card">
+        <div class="search">
+          <label class="small">Search</label>
+          <input id="search" placeholder="Search articles, tags..." />
+        </div>
+
+        <div style="margin-top:12px">
+          <label class="small">Categories</label>
+          <div id="categories" class="chips"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label class="small">Tags</label>
+          <div id="tags" class="chips"></div>
+        </div>
+
+        <div style="margin-top:12px;font-size:12px;color:var(--muted)"><strong>Tip:</strong> Click a post title to read and comment. Comments persist locally in your browser.</div>
+      </aside>
+
+      <!-- main -->
+      <main>
+        <div id="list-view">
+          <section class="posts" id="posts"></section>
+          <div id="no-results" class="card hidden">No articles match your filters.</div>
+        </div>
+
+        <div id="post-view" class="card hidden post-full">
+          <div class="back" id="back">← Back to articles</div>
+          <h2 id="post-title"></h2>
+          <div class="meta" id="post-meta"></div>
+          <div class="content" id="post-content" style="margin-top:12px"></div>
+
+          <section style="margin-top:16px">
+            <h3>Comments</h3>
+            <div id="comments-list"></div>
+
+            <form id="comment-form" class="comment-form" style="margin-top:12px">
+              <div style="display:grid;grid-template-columns:1fr;gap:8px">
+                <input id="comment-name" placeholder="Your name" />
+                <textarea id="comment-text" rows="3" placeholder="Write a polite, on-topic comment..."></textarea>
+                <div style="text-align:right"><button class="btn" type="submit">Post comment</button></div>
+              </div>
+            </form>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <footer>© <span id="year"></span> Educational Blog — Demo project</footer>
+  </div>
+
+  <script>
+    // --- Data & Storage ---
+    const STORAGE_KEY = 'edu_blog_comments_html_v1';
+
+    const samplePosts = [
+      {
+        id: 'tech-1',
+        title: 'Understanding AI: From basics to large models',
+        category: 'Technology',
+        tags: ['AI','ML','Beginners'],
+        date: '2025-11-01',
+        excerpt: 'A beginner-friendly introduction to artificial intelligence, covering key concepts and practical examples.',
+        content: `\nArtificial intelligence (AI) is the simulation of human intelligence processes by machines. **Key areas** include machine learning, natural language processing, and computer vision.\n\nWhy it matters:\nAI powers search engines, recommendations, and assistants. Start with small projects: classify images, or build a sentiment analyzer.`
+      },
+      {
+        id: 'health-1',
+        title: 'Healthy Habits: Simple daily routines for better health',
+        category: 'Health',
+        tags: ['Wellness','Habits'],
+        date: '2025-10-15',
+        excerpt: 'Small changes to your daily routine that compound into big health benefits.',
+        content: `\nHealthy living starts with *small habits*. Try 30 minutes of moderate exercise, balanced meals, and 7-8 hours of sleep.\n\nMental health: Mindfulness and social connection are critical.`
+      },
+      {
+        id: 'finance-1',
+        title: 'Intro to Personal Finance: Budgeting and saving',
+        category: 'Finance',
+        tags: ['Budgeting','Saving'],
+        date: '2025-09-30',
+        excerpt: 'Foundations of budgeting, saving strategies and setting financial goals.',
+        content: `\nStart with a simple budget. Track income and expenses, create an emergency fund, and automate savings.\n\nRule of thumb: Save at least 20% of surplus income.`
+      }
+    ];
+
+    // --- state ---
+    let posts = samplePosts.slice();
+    let query = '';
+    let selectedCategory = '';
+    let selectedTag = '';
+    let activePostId = null;
+    let comments = {};
+
+    // --- elements ---
+    const postsEl = document.getElementById('posts');
+    const categoriesEl = document.getElementById('categories');
+    const tagsEl = document.getElementById('tags');
+    const searchEl = document.getElementById('search');
+    const noResultsEl = document.getElementById('no-results');
+    const postView = document.getElementById('post-view');
+    const listView = document.getElementById('list-view');
+    const backBtn = document.getElementById('back');
+    const postTitle = document.getElementById('post-title');
+    const postMeta = document.getElementById('post-meta');
+    const postContent = document.getElementById('post-content');
+    const commentsList = document.getElementById('comments-list');
+    const commentForm = document.getElementById('comment-form');
+    const commentName = document.getElementById('comment-name');
+    const commentText = document.getElementById('comment-text');
+    const siteTitle = document.getElementById('site-title');
+    const switchBtn = document.getElementById('switch-subject');
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // --- helpers ---
+    function saveComments(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(comments));
+    }
+    function loadComments(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        try{comments = JSON.parse(raw);}catch(e){comments={};}
+      }
+    }
+
+    function sanitize(text){
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderCategories(){
+      const cats = Array.from(new Set(posts.map(p=>p.category)));
+      categoriesEl.innerHTML = '';
+      const all = document.createElement('button'); all.textContent='All'; all.className='chip'+(selectedCategory===''?' active':''); all.onclick=()=>{selectedCategory=''; render();};
+      categoriesEl.appendChild(all);
+      cats.forEach(c=>{
+        const b=document.createElement('button'); b.textContent=c; b.className='chip'+(selectedCategory===c?' active':''); b.onclick=()=>{selectedCategory=c; render();}; categoriesEl.appendChild(b);
+      });
+    }
+
+    function renderTags(){
+      const tset = new Set(); posts.forEach(p=>p.tags.forEach(t=>tset.add(t)));
+      const tarr = Array.from(tset);
+      tagsEl.innerHTML='';
+      const all=document.createElement('button'); all.textContent='All'; all.className='chip'+(selectedTag===''?' tag-active':''); all.onclick=()=>{selectedTag=''; render();}; tagsEl.appendChild(all);
+      tarr.forEach(t=>{const b=document.createElement('button'); b.textContent=t; b.className='chip'+(selectedTag===t?' tag-active':''); b.onclick=()=>{selectedTag=t; render();}; tagsEl.appendChild(b)});
+    }
+
+    function filterPosts(){
+      return posts.filter(p=>{
+        if(selectedCategory && p.category!==selectedCategory) return false;
+        if(selectedTag && !p.tags.includes(selectedTag)) return false;
+        if(query){ const q=query.toLowerCase();
+          if(!(p.title.toLowerCase().includes(q)||p.excerpt.toLowerCase().includes(q)||p.content.toLowerCase().includes(q))) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderPosts(){
+      const list = filterPosts();
+      postsEl.innerHTML='';
+      if(list.length===0){ noResultsEl.classList.remove('hidden'); } else { noResultsEl.classList.add('hidden'); }
+      list.forEach(p=>{
+        const el=document.createElement('article'); el.className='post';
+        const h=document.createElement('h2'); h.textContent=p.title; h.onclick=()=>openPost(p.id);
+        const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${p.category} • ${p.date}`;
+        const tagWrap=document.createElement('div'); tagWrap.className='tags'; p.tags.forEach(t=>{const s=document.createElement('span'); s.textContent=t; s.style.marginLeft='6px'; s.className='small'; tagWrap.appendChild(s)});
+        const ex=document.createElement('p'); ex.className='excerpt'; ex.textContent=p.excerpt;
+        const action=document.createElement('div'); action.className='action-row'; const read=document.createElement('div'); read.textContent='Read more →'; read.style.color='var(--accent)'; read.style.cursor='pointer'; read.onclick=()=>openPost(p.id);
+        action.appendChild(read); action.appendChild(document.createElement('div'));
+        el.appendChild(h); el.appendChild(meta); el.appendChild(tagWrap); el.appendChild(ex); el.appendChild(action);
+        postsEl.appendChild(el);
+      });
+    }
+
+    function render(){
+      renderCategories(); renderTags(); renderPosts();
+      // update site title focus optionally
+      document.getElementById('site-title').textContent = (selectedCategory || activePostId ? (selectedCategory || '') : 'Technology') + ' Learning Hub';
+    }
+
+    function openPost(id){
+      activePostId = id;
+      const p = posts.find(x=>x.id===id);
+      if(!p) return;
+      listView.classList.add('hidden'); postView.classList.remove('hidden');
+      postTitle.textContent = p.title; postMeta.textContent = `${p.category} • ${p.date}`;
+      // simple markdown-ish -> html (limited): **bold**, *italic*, line breaks
+      let html = sanitize(p.content);
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/\n\n/g, '<br><br>');
+      postContent.innerHTML = html;
+      renderComments();
+    }
+
+    function closePost(){ activePostId=null; postView.classList.add('hidden'); listView.classList.remove('hidden'); }
+
+    function renderComments(){
+      commentsList.innerHTML='';
+      const arr = comments[activePostId] || [];
+      if(arr.length===0){ commentsList.innerHTML='<div class="small" style="margin-bottom:8px">No comments yet — be the first to comment.</div>' }
+      arr.forEach(c=>{
+        const d=document.createElement('div'); d.className='comment';
+        const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${c.name} • ${new Date(c.date).toLocaleString()}`;
+        const txt=document.createElement('div'); txt.style.marginTop='6px'; txt.innerHTML = sanitize(c.text).replace(/\n/g,'<br>');
+        const del=document.createElement('div'); del.style.textAlign='right'; del.style.marginTop='8px'; const delbtn=document.createElement('button'); delbtn.className='small'; delbtn.textContent='Delete'; delbtn.style.color='red'; delbtn.onclick=()=>{ deleteComment(activePostId,c.id); };
+        del.appendChild(delbtn);
+        d.appendChild(meta); d.appendChild(txt); d.appendChild(del);
+        commentsList.appendChild(d);
+      });
+    }
+
+    function addComment(postId,name,text){
+      if(!name || !text) return;
+      if(!comments[postId]) comments[postId]=[];
+      comments[postId].push({id:Date.now(),name,text,date:new Date().toISOString()});
+      saveComments(); renderComments();
+    }
+
+    function deleteComment(postId,commentId){
+      if(!comments[postId]) return; comments[postId] = comments[postId].filter(c=>c.id!==commentId); saveComments(); renderComments();
+    }
+
+    // --- events ---
+    searchEl.addEventListener('input', e=>{ query = e.target.value; renderPosts(); });
+    backBtn.addEventListener('click', closePost);
+    commentForm.addEventListener('submit', e=>{
+      e.preventDefault(); if(!activePostId) return; const name = commentName.value.trim(); const txt = commentText.value.trim(); if(!name||!txt) return; addComment(activePostId,name,txt); commentName.value=''; commentText.value='';
+    });
+
+    switchBtn.addEventListener('click', ()=>{
+      const options = ['Technology','Health','Finance'];
+      const cur = siteTitle.textContent.split(' ')[0] || 'Technology';
+      const ix = options.indexOf(cur);
+      const next = options[(ix+1)%options.length];
+      siteTitle.textContent = next + ' Learning Hub';
+    });
+
+    // initialize
+    loadComments(); render();
+  </script>
+</body>
+</html>
